@@ -1,0 +1,204 @@
+---
+title: "LasVegas"
+author: "Andie"
+date: "9/1/2017"
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#install.packages('corrplot')
+#install.packages('doBy')
+library(doBy) #summaryBy
+library(ggplot2) # Data visualization
+library(dplyr) 
+library(corrplot) # correlation plot
+library(plotly) # interactive map
+library(rworldmap) #world map
+```
+
+Lets open our file. We notice that its a csv file and it uses semi colons to separate the values, so we will use read.csv2 to open our file and assign it to 'the 'df'. 
+```{r}
+df <- read.csv2('/Users/andiedonovan/myProjects/LasVegas/LasVegas.csv') # open file
+View(df) # view the whole data set
+```
+We notice that some of the column names are long or messy, so lets fix that:
+
+There are a lot of columns, so it takes a long time to rename the columns. Say we didnt really care about their length, but just wanted to remove the periods from the column names. We could use the function gsub to easily do this:
+```{r}
+names(df) <- gsub("\\.", "", names(df))
+df
+```
+
+If we did want to go ahead and rename all of the columns, we could do that using names, colnames and a list:
+```{r}
+#Using names
+names(df) # our current column names
+names(df)[1]<-"Country" #rename just first one column
+df #check that the first column name changed from 'Usercountry' to 'Country'
+
+#Using colnames
+colnames(df) # gives us the same thing
+colnames(df)<-c('Country', 'NoReviews', 'NoHotelReviews', 'Helpful', 'Score', 'Stay', 'Traveler', 'Pool', 'Gym', 'Tennis', 'Spa', 'Casino', 'Internet', 'Name', 'Stars', 'NoRms', 'Continent', 'MemberYrs', 'Month', 'Weekday') #rename all of the columns using a list
+
+df # check that it worked!
+```
+
+Theres a lot of variables in our dataset, and we probably will not need all of them for our analysis. We can create different sub datasets to allow for easier analysis of specific factors. For example, to see how whether or not a hotel has certain amenities affects its score, lets make a dataset that only includes the hotel name, country, score, and the 6 amenities listed. Lets call this new dataset amenities1:
+
+Also notice the values for each of the variables is either 'YES' or 'NO'. Its much easier to work with numbers than characters, so lets turn each of the variables into a binary factor with 'YES'=2 and 'NO'=1
+
+```{r}
+amenities1 = df %>% 
+  select(Name, Country,Score, Pool, Gym, Tennis, Spa, Casino, Internet)
+
+amenities1$Pool<-as.numeric(amenities1$Pool)
+amenities1$Gym<-as.numeric(amenities1$Gym)
+amenities1$Tennis<-as.numeric(amenities1$Tennis)
+amenities1$Spa<-as.numeric(amenities1$Spa)
+amenities1$Casino<-as.numeric(amenities1$Casino)
+amenities1$Internet<-as.numeric(amenities1$Internet)
+
+View(amenities1)
+```
+
+Above you'll see a symbol that looks like this: %>%. This is called a pipe operator (dplyr package) and is used to insert some input or argument into a function. Its useful when we have sequences of operations and can help make the flow of the steps more readable/ easier to follow. 
+
+Equivalently, we could nest the above code and get the same results. This would look like: amenities = select(df, c(Name, Country, Score, Pool, Gym, Tennis, Spa, Casino, Internet)). Although in this case, it doesnt make much of a difference which format you use, later on, the pipe operator is a powerful tool for applying multiple operations to one object. 
+
+Alternative data set without hotel name & country (ie only numerical): 
+```{r}
+amenities2 = df %>% 
+  select(Score, Pool, Gym, Tennis, Spa, Casino, Internet) # columns to be selected
+
+amenities2 = amenities2 %>% mutate(Pool=as.factor(ifelse(Pool=="YES", "1", "0")))
+amenities2 = amenities2 %>% mutate(Gym=as.factor(ifelse(Gym=="YES", "1", "0")))
+amenities2 = amenities2 %>% mutate(Tennis=as.factor(ifelse(Tennis=="YES", "1", "0")))
+amenities2 = amenities2 %>% mutate(Spa=as.factor(ifelse(Spa=="YES", "1", "0")))
+amenities2 = amenities2 %>% mutate(Casino=as.factor(ifelse(Casino=="YES", "1", "0")))
+amenities2 = amenities2 %>% mutate(Internet=as.factor(ifelse(Internet=="YES", "1", "0")))
+```
+
+Linear Regression:
+Lets see how influential the 6 amenities are on the hotel's score. To do this, lets regress Pool, Gym, Tennis, Spa, Casino, and Internet on Score. We will call our linear model 'am_model'
+```{r}
+#am_model1<-glm(Score~Pool+Gym+Tennis+Spa+Casino+Internet, data=amenities1, family='binomial') # run regression
+#summary(am_model1) # summarize linear model
+
+#am_model2<-glm(Score~., data=amenities2, family='binomial') # run regression
+#summary(am_model2) # summarize linear model
+
+```
+The first argument in the glm (generalized linear model) function is the formula. You place the independent variable on the left of the tilda and the regressors or dependent variables on the right. The second argument simply specifies that we are using our amenities data set and the third specifies that our data is binomial (ie uses logit link function). 
+
+Look at the summary table and see if you can interpert the different columns. 
+Recall: 
+* Estimate (Coefficient):
+* Std. Error:
+* T Value:
+* P(>|t|)
+
+Correlation Matrix:
+Are the variables related to each other in any way? What variables are most related to Score?
+```{r}
+amenities1[,3:9]
+cor.amen<-cor(amenities1[,3:9], use="complete", method="pearson") 
+corrplot(cor.amen)
+```
+ TRY:
+geom_bar(stat='identity')???
+
+Lets make a graph looking at how many hotels f
+```{r}
+g<- ggplot(df)+
+  geom_bar(aes(x=Stars, fill = Continent), color="black") + #create bars & fill color according to continent
+  theme(plot.title=element_text(hjust=0.5), # center title
+        axis.text.x=element_text(angle=90, hjust=1)) + # tilt the x-axis labels 90 degrees to the left
+  xlab("Hotel Stars") + # add label x axis
+  ylab("Number of Hotels") + # add label y axis
+  scale_x_continuous(breaks= seq(2,5,by=0.5), # make our tick marks count half stars
+                     labels = c('2.0', '2.5', '3.0', '3.5','4.0', '4.5', '5.0')) + 
+  ggtitle("Hotels Per Rating and Continent") #title ggplot
+g #shows plot
+
+ggplotly(g) # turn into plotly plot (interactive)
+```
+```{r}
+avgScores<-summaryBy(Score~Country, data=mapdf, FUN=mean)
+colnames(avgScores)<-c('region', 'value')
+avgScores
+
+map.world <- merge(x=map_data(map="world"),
+                   y=avgScores,
+                   by.x="region",
+                   by.y="region",
+                   all.x=TRUE)
+
+map.world[is.na(map.world)] <- 0 # replace NAs with 0
+
+map.world <- map.world[order(map.world$order),]
+
+View(map.world)
+#map.world <- map.world[order(map.world$order),]
+#map.world
+
+p <- ggplot(map.world) +
+     geom_map(map=map.world, aes(map_id=region, x=long, y=lat, value=value)) + 
+     scale_fill_gradient(low = "brown3", high = "green", guide = "colourbar")+
+    coord_equal() +
+         theme(axis.line=element_blank(),
+               axis.text.x=element_blank(),
+               axis.text.y=element_blank(),
+               axis.ticks=element_blank(),
+               axis.title.x=element_blank(),
+               axis.title.y=element_blank(),
+               panel.background=element_blank(),
+               panel.border=element_blank(),
+               panel.grid.major=element_blank(),
+               panel.grid.minor=element_blank(),
+               plot.background=element_blank(),
+               legend.title=element_blank(),
+               legend.position="bottom") 
+p
+```
+
+
+```{r}
+mapdf<-df %>%
+    select(Country, Score)
+#mapdf$Score<-as.numeric(mapdf$Score)
+#mapdf %>%
+#  sapply(mapdf$Score, 1,FUN=mean)
+
+avgScores<-summaryBy(Score~Country, data=mapdf, FUN=mean)
+avgScores
+map.world <- map_data(map="world")
+m <- ggplot() +
+  theme(legend.position="none") + 
+  geom_map(data=map.world, map=map.world, 
+           aes(map_id=region, x=long, y=lat),
+           fill="white", colour="black", size=0.25) + 
+  geom_map(data=mapdf, map=map.world, aes(map_id=Country, fill=avgScores), color="white", size=0.25)
+m
+
+
+
+map.world <- merge(x=map_data(map="world"),
+                   y=filtered[,c("CountryName","Value")],
+                   by.x="region",
+                   by.y="CountryName",
+                   all.x=TRUE)
+#map.world <- map.world[order(map.world$order),]
+
+
+
+avgScores = as.data.frame(avgScores)
+m<-ggplot(avgScores, aes(map_id = Country)) + 
+    geom_map(aes(fill = Score.mean), map = worldMap, size=0.3) + 
+    expand_limits(x = worldMap$long, y = worldMap$lat) 
+m
+
+```
+
