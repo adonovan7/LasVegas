@@ -2,12 +2,8 @@
 title: "LasVegas"
 author: "Andie"
 date: "9/1/2017"
-output: html_document
+output: document
 ---
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
 ```{r}
 #install.packages('corrplot')
 #install.packages('doBy')
@@ -19,7 +15,7 @@ library(plotly) # interactive map
 library(rworldmap) #world map
 ```
 
-Lets open our file. We notice that its a csv file and it uses semi colons to separate the values, so we will use read.csv2 to open our file and assign it to 'the 'df'. 
+Lets open our file. We notice that its a csv file and it uses semi colons to separate the values, so we will use read.csv2 to open our file and assign it to the 'df'. 
 ```{r}
 df <- read.csv2('/Users/andiedonovan/myProjects/LasVegas/LasVegas.csv') # open file
 View(df) # view the whole data set
